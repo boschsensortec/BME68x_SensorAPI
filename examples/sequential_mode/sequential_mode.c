@@ -11,6 +11,17 @@
 #include "common.h"
 #include "coines.h"
 
+/***********************************************************************/
+/*                         Macros                                      */
+/***********************************************************************/
+
+/* Macro for count of samples to be displayed */
+#define SAMPLE_COUNT  UINT8_C(300)
+
+/***********************************************************************/
+/*                         Test code                                   */
+/***********************************************************************/
+
 int main(void)
 {
     struct bme68x_dev bme;
@@ -18,7 +29,7 @@ int main(void)
     struct bme68x_conf conf;
     struct bme68x_heatr_conf heatr_conf;
     struct bme68x_data data[3];
-    uint16_t del_period;
+    uint32_t del_period;
     uint32_t time_ms = 0;
     uint8_t n_fields;
     uint16_t sample_count = 1;
@@ -67,10 +78,11 @@ int main(void)
     /* Check if rslt == BME68X_OK, report or handle if otherwise */
     printf(
         "Sample, TimeStamp(ms), Temperature(deg C), Pressure(Pa), Humidity(%%), Gas resistance(ohm), Status, Profile index, Measurement index\n");
-    while (sample_count <= 300)
+    while (sample_count <= SAMPLE_COUNT)
     {
-        del_period = bme68x_get_meas_dur(BME68X_SEQUENTIAL_MODE, &conf) + heatr_conf.heatr_dur_prof[0];
-        bme.delay_us(del_period * 1000, bme.intf_ptr);
+        /* Calculate delay period in microseconds */
+        del_period = bme68x_get_meas_dur(BME68X_SEQUENTIAL_MODE, &conf, &bme) + (heatr_conf.heatr_dur_prof[0] * 1000);
+        bme.delay_us(del_period, bme.intf_ptr);
 
         time_ms = coines_get_millis();
 
@@ -81,9 +93,9 @@ int main(void)
         for (uint8_t i = 0; i < n_fields; i++)
         {
 #ifdef BME68X_USE_FPU
-            printf("%u, %u, %.2f, %.2f, %.2f, %.2f, 0x%x, %d, %d\n",
+            printf("%u, %lu, %.2f, %.2f, %.2f, %.2f, 0x%x, %d, %d\n",
                    sample_count,
-                   time_ms,
+                   (long unsigned int)time_ms,
                    data[i].temperature,
                    data[i].pressure,
                    data[i].humidity,
@@ -92,13 +104,13 @@ int main(void)
                    data[i].gas_index,
                    data[i].meas_index);
 #else
-            printf("%u, %u, %d, %u, %u, %u, 0x%x, %d, %d\n",
+            printf("%u, %lu, %d, %lu, %lu, %lu, 0x%x, %d, %d\n",
                    sample_count,
-                   time_ms,
+                   (long unsigned int)time_ms,
                    (data[i].temperature / 100),
-                   data[i].pressure,
-                   (data[i].humidity / 1000),
-                   data[i].gas_resistance,
+                   (long unsigned int)data[i].pressure,
+                   (long unsigned int)(data[i].humidity / 1000),
+                   (long unsigned int)data[i].gas_resistance,
                    data[i].status,
                    data[i].gas_index,
                    data[i].meas_index);

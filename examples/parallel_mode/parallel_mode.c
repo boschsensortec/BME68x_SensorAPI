@@ -11,11 +11,22 @@
 #include "common.h"
 #include "coines.h"
 
+/***********************************************************************/
+/*                         Macros                                      */
+/***********************************************************************/
+
 /*
  * Macro definition for valid new data (0x80) AND
  * heater stability (0x10) AND gas resistance (0x20) values
  */
 #define BME68X_VALID_DATA  UINT8_C(0xB0)
+
+/* Macro for count of samples to be displayed */
+#define SAMPLE_COUNT       UINT8_C(50)
+
+/***********************************************************************/
+/*                         Test code                                   */
+/***********************************************************************/
 
 int main(void)
 {
@@ -24,7 +35,7 @@ int main(void)
     struct bme68x_conf conf;
     struct bme68x_heatr_conf heatr_conf;
     struct bme68x_data data[3];
-    uint16_t del_period;
+    uint32_t del_period;
     uint8_t n_fields;
     uint32_t time_ms = 0;
     uint16_t sample_count = 1;
@@ -52,8 +63,8 @@ int main(void)
     /* Check if rslt == BME68X_OK, report or handle if otherwise */
     conf.filter = BME68X_FILTER_OFF;
     conf.odr = BME68X_ODR_NONE;
-    conf.os_hum = BME68X_OS_16X;
-    conf.os_pres = BME68X_OS_1X;
+    conf.os_hum = BME68X_OS_1X;
+    conf.os_pres = BME68X_OS_16X;
     conf.os_temp = BME68X_OS_2X;
     rslt = bme68x_set_conf(&conf, &bme);
     bme68x_check_rslt("bme68x_set_conf", rslt);
@@ -64,7 +75,7 @@ int main(void)
     heatr_conf.heatr_dur_prof = mul_prof;
 
     /* Shared heating duration in milliseconds */
-    heatr_conf.shared_heatr_dur = 140 - bme68x_get_meas_dur(BME68X_PARALLEL_MODE, &conf);
+    heatr_conf.shared_heatr_dur = 140 - (bme68x_get_meas_dur(BME68X_PARALLEL_MODE, &conf, &bme) / 1000);
 
     heatr_conf.profile_len = 10;
     rslt = bme68x_set_heatr_conf(BME68X_PARALLEL_MODE, &heatr_conf, &bme);
@@ -80,10 +91,11 @@ int main(void)
     /* Check if rslt == BME68X_OK, report or handle if otherwise */
     printf(
         "Sample, TimeStamp(ms), Temperature(deg C), Pressure(Pa), Humidity(%%), Gas resistance(ohm), Status, Gas index, Meas index\n");
-    while (sample_count <= 50)
+    while (sample_count <= SAMPLE_COUNT)
     {
-        del_period = bme68x_get_meas_dur(BME68X_PARALLEL_MODE, &conf) + heatr_conf.shared_heatr_dur;
-        bme.delay_us(del_period * 1000, bme.intf_ptr);
+        /* Calculate delay period in microseconds */
+        del_period = bme68x_get_meas_dur(BME68X_PARALLEL_MODE, &conf, &bme) + (heatr_conf.shared_heatr_dur * 1000);
+        bme.delay_us(del_period, bme.intf_ptr);
 
         time_ms = coines_get_millis();
 
@@ -96,9 +108,9 @@ int main(void)
             if (data[i].status == BME68X_VALID_DATA)
             {
 #ifdef BME68X_USE_FPU
-                printf("%u, %u, %.2f, %.2f, %.2f, %.2f, 0x%x, %d, %d\n",
+                printf("%u, %lu, %.2f, %.2f, %.2f, %.2f, 0x%x, %d, %d\n",
                        sample_count,
-                       time_ms,
+                       (long unsigned int)time_ms,
                        data[i].temperature,
                        data[i].pressure,
                        data[i].humidity,
@@ -107,13 +119,13 @@ int main(void)
                        data[i].gas_index,
                        data[i].meas_index);
 #else
-                printf("%u, %u, %d, %u, %u, %u, 0x%x, %d, %d\n",
+                printf("%u, %lu, %d, %lu, %lu, %lu, 0x%x, %d, %d\n",
                        sample_count,
-                       time_ms,
+                       (long unsigned int)time_ms,
                        (data[i].temperature / 100),
-                       data[i].pressure,
-                       (data[i].humidity / 1000),
-                       data[i].gas_resistance,
+                       (long unsigned int)data[i].pressure,
+                       (long unsigned int)(data[i].humidity / 1000),
+                       (long unsigned int)data[i].gas_resistance,
                        data[i].status,
                        data[i].gas_index,
                        data[i].meas_index);

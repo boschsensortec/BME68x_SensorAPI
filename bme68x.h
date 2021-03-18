@@ -31,15 +31,15 @@
 * POSSIBILITY OF SUCH DAMAGE.
 *
 * @file       bme68x.h
-* @date       2020-11-02
-* @version    v4.4.2
+* @date       2021-03-18
+* @version    v4.4.4
 *
 */
 
 /*!
  * @defgroup bme68x BME68X
- * @brief <a href="https://www.bosch-sensortec.com/bst/products/all_products/bme68x">Product Overview</a>
- * and  <a href="https://github.com/BoschSensortec/BME68X_driver">Sensor API Source Code</a>
+ * @brief <a href="https://www.bosch-sensortec.com/bst/products/all_products/bme680">Product Overview</a>
+ * and  <a href="https://github.com/BoschSensortec/BME68x-Sensor-API">Sensor API Source Code</a>
  */
 
 #ifndef BME68X_H_
@@ -186,15 +186,17 @@ int8_t bme68x_get_op_mode(uint8_t *op_mode, struct bme68x_dev *dev);
  * \ingroup bme68xApiConfig
  * \page bme68x_api_bme68x_get_meas_dur bme68x_get_meas_dur
  * \code
- * uint16_t bme68x_get_meas_dur(const uint8_t op_mode, const struct bme68x_conf *conf);
+ * uint32_t bme68x_get_meas_dur(const uint8_t op_mode, struct bme68x_conf *conf, struct bme68x_dev *dev);
  * \endcode
  * @details This API is used to get the remaining duration that can be used for heating.
  *
- * @return Result of API execution status
- * @retval 0 -> Success
- * @retval < 0 -> Fail
+ * @param[in] op_mode : Desired operation mode.
+ * @param[in] conf    : Desired sensor configuration.
+ * @param[in] dev     : Structure instance of bme68x_dev
+ *
+ * @return Measurement duration calculated in microseconds
  */
-uint16_t bme68x_get_meas_dur(const uint8_t op_mode, const struct bme68x_conf *conf);
+uint32_t bme68x_get_meas_dur(const uint8_t op_mode, struct bme68x_conf *conf, struct bme68x_dev *dev);
 
 /**
  * \ingroup bme68x

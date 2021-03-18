@@ -31,8 +31,8 @@
 * POSSIBILITY OF SUCH DAMAGE.
 *
 * @file       bme68x_defs.h
-* @date       2020-11-02
-* @version    v4.4.2
+* @date       2021-03-18
+* @version    v4.4.4
 *
 */
 
@@ -687,7 +687,7 @@ typedef BME68X_INTF_RET_TYPE (*bme68x_write_fptr_t)(uint8_t reg_addr, const uint
  * @param[in,out] intf_ptr : Void pointer that can enable the linking of descriptors
  *                           for interface related callbacks
  */
-typedef void (*bm68x_delay_us_fptr_t)(uint32_t period, void *intf_ptr);
+typedef void (*bme68x_delay_us_fptr_t)(uint32_t period, void *intf_ptr);
 
 /*
  * @brief Generic communication function pointer
@@ -959,7 +959,7 @@ struct bme68x_dev
     bme68x_write_fptr_t write;
 
     /*! Delay function pointer */
-    bm68x_delay_us_fptr_t delay_us;
+    bme68x_delay_us_fptr_t delay_us;
 
     /*! To store interface pointer error */
     BME68X_INTF_RET_TYPE intf_rslt;

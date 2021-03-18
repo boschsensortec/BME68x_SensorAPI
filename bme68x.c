@@ -31,8 +31,8 @@
 * POSSIBILITY OF SUCH DAMAGE.
 *
 * @file       bme68x.c
-* @date       2020-11-02
-* @version    v4.4.2
+* @date       2021-03-18
+* @version    v4.4.4
 *
 */
 
@@ -84,8 +84,11 @@ static uint8_t calc_res_heat(uint16_t temp, const struct bme68x_dev *dev);
 
 #endif
 
-/* This internal API is used to calculate the field data of sensor */
+/* This internal API is used to read a single data of the sensor */
 static int8_t read_field_data(uint8_t index, struct bme68x_data *data, struct bme68x_dev *dev);
+
+/* This internal API is used to read all data fields of the sensor */
+static int8_t read_all_field_data(struct bme68x_data * const data[], struct bme68x_dev *dev);
 
 /* This internal API is used to switch between SPI memory pages */
 static int8_t set_mem_page(uint8_t reg_addr, struct bme68x_dev *dev);
@@ -478,31 +481,49 @@ int8_t bme68x_get_op_mode(uint8_t *op_mode, struct bme68x_dev *dev)
 /*
  * @brief This API is used to get the remaining duration that can be used for heating.
  */
-uint16_t bme68x_get_meas_dur(const uint8_t op_mode, const struct bme68x_conf *conf)
+uint32_t bme68x_get_meas_dur(const uint8_t op_mode, struct bme68x_conf *conf, struct bme68x_dev *dev)
 {
-    uint32_t tph_dur = 0; /* Calculate in us */
+    int8_t rslt;
+    uint32_t meas_dur = 0; /* Calculate in us */
     uint32_t meas_cycles;
     uint8_t os_to_meas_cycles[6] = { 0, 1, 2, 4, 8, 16 };
 
     if (conf != NULL)
     {
-        meas_cycles = os_to_meas_cycles[conf->os_temp];
-        meas_cycles += os_to_meas_cycles[conf->os_pres];
-        meas_cycles += os_to_meas_cycles[conf->os_hum];
+        /* Boundary check for temperature oversampling */
+        rslt = boundary_check(&conf->os_temp, BME68X_OS_16X, dev);
 
-        /* TPH measurement duration */
-        tph_dur = meas_cycles * UINT32_C(1963);
-        tph_dur += UINT32_C(477 * 4); /* TPH switching duration */
-        tph_dur += UINT32_C(477 * 5); /* Gas measurement duration */
-        tph_dur += UINT32_C(500); /* Get it to the closest integer when converted to ms.*/
-        tph_dur /= UINT32_C(1000); /* Convert to ms */
-        if (op_mode != BME68X_PARALLEL_MODE)
+        if (rslt == BME68X_OK)
         {
-            tph_dur += UINT32_C(1); /* Wake up duration of 1ms */
+            /* Boundary check for pressure oversampling */
+            rslt = boundary_check(&conf->os_pres, BME68X_OS_16X, dev);
+        }
+
+        if (rslt == BME68X_OK)
+        {
+            /* Boundary check for humidity oversampling */
+            rslt = boundary_check(&conf->os_hum, BME68X_OS_16X, dev);
+        }
+
+        if (rslt == BME68X_OK)
+        {
+            meas_cycles = os_to_meas_cycles[conf->os_temp];
+            meas_cycles += os_to_meas_cycles[conf->os_pres];
+            meas_cycles += os_to_meas_cycles[conf->os_hum];
+
+            /* TPH measurement duration */
+            meas_dur = meas_cycles * UINT32_C(1963);
+            meas_dur += UINT32_C(477 * 4); /* TPH switching duration */
+            meas_dur += UINT32_C(477 * 5); /* Gas measurement duration */
+
+            if (op_mode != BME68X_PARALLEL_MODE)
+            {
+                meas_dur += UINT32_C(1000); /* Wake up duration of 1ms */
+            }
         }
     }
 
-    return (uint16_t)tph_dur;
+    return meas_dur;
 }
 
 /*
@@ -514,8 +535,8 @@ int8_t bme68x_get_data(uint8_t op_mode, struct bme68x_data *data, uint8_t *n_dat
 {
     int8_t rslt;
     uint8_t i = 0, j = 0, new_fields = 0;
-    struct bme68x_data *field_ptr[3];
-    struct bme68x_data field_data[3];
+    struct bme68x_data *field_ptr[3] = { 0 };
+    struct bme68x_data field_data[3] = { { 0 } };
 
     field_ptr[0] = &field_data[0];
     field_ptr[1] = &field_data[1];
@@ -544,9 +565,11 @@ int8_t bme68x_get_data(uint8_t op_mode, struct bme68x_data *data, uint8_t *n_dat
         else if ((op_mode == BME68X_PARALLEL_MODE) || (op_mode == BME68X_SEQUENTIAL_MODE))
         {
             /* Read the 3 fields and count the number of new data fields */
-            for (i = 0; ((i < 3) && (rslt == BME68X_OK)); i++)
+            rslt = read_all_field_data(field_ptr, dev);
+
+            new_fields = 0;
+            for (i = 0; (i < 3) && (rslt == BME68X_OK); i++)
             {
-                rslt = read_field_data(i, field_ptr[i], dev);
                 if (field_ptr[i]->status & BME68X_NEW_DATA_MSK)
                 {
                     new_fields++;
@@ -1126,7 +1149,7 @@ static uint8_t calc_gas_wait(uint16_t dur)
     return durval;
 }
 
-/* This internal API is used to calculate the field data of sensor */
+/* This internal API is used to read a single data of the sensor */
 static int8_t read_field_data(uint8_t index, struct bme68x_data *data, struct bme68x_dev *dev)
 {
     int8_t rslt = BME68X_OK;
@@ -1210,6 +1233,84 @@ static int8_t read_field_data(uint8_t index, struct bme68x_data *data, struct bm
         }
 
         tries--;
+    }
+
+    return rslt;
+}
+
+/* This internal API is used to read all data fields of the sensor */
+static int8_t read_all_field_data(struct bme68x_data * const data[], struct bme68x_dev *dev)
+{
+    int8_t rslt = BME68X_OK;
+    uint8_t buff[BME68X_LEN_FIELD * 3] = { 0 };
+    uint8_t gas_range_l, gas_range_h;
+    uint32_t adc_temp;
+    uint32_t adc_pres;
+    uint16_t adc_hum;
+    uint16_t adc_gas_res_low, adc_gas_res_high;
+    uint8_t off;
+    uint8_t set_val[30] = { 0 }; /* idac, res_heat, gas_wait */
+    uint8_t i;
+
+    if (!data[0] && !data[1] && !data[2])
+    {
+        rslt = BME68X_E_NULL_PTR;
+    }
+
+    if (rslt == BME68X_OK)
+    {
+        rslt = bme68x_get_regs(BME68X_REG_FIELD0, buff, (uint32_t) BME68X_LEN_FIELD * 3, dev);
+    }
+
+    if (rslt == BME68X_OK)
+    {
+        rslt = bme68x_get_regs(BME68X_REG_IDAC_HEAT0, set_val, 30, dev);
+    }
+
+    for (i = 0; ((i < 3) && (rslt == BME68X_OK)); i++)
+    {
+        off = (uint8_t)(i * BME68X_LEN_FIELD);
+        data[i]->status = buff[off] & BME68X_NEW_DATA_MSK;
+        data[i]->gas_index = buff[off] & BME68X_GAS_INDEX_MSK;
+        data[i]->meas_index = buff[off + 1];
+
+        /* read the raw data from the sensor */
+        adc_pres =
+            (uint32_t) (((uint32_t) buff[off + 2] * 4096) | ((uint32_t) buff[off + 3] * 16) |
+                        ((uint32_t) buff[off + 4] / 16));
+        adc_temp =
+            (uint32_t) (((uint32_t) buff[off + 5] * 4096) | ((uint32_t) buff[off + 6] * 16) |
+                        ((uint32_t) buff[off + 7] / 16));
+        adc_hum = (uint16_t) (((uint32_t) buff[off + 8] * 256) | (uint32_t) buff[off + 9]);
+        adc_gas_res_low = (uint16_t) ((uint32_t) buff[off + 13] * 4 | (((uint32_t) buff[off + 14]) / 64));
+        adc_gas_res_high = (uint16_t) ((uint32_t) buff[off + 15] * 4 | (((uint32_t) buff[off + 16]) / 64));
+        gas_range_l = buff[off + 14] & BME68X_GAS_RANGE_MSK;
+        gas_range_h = buff[off + 16] & BME68X_GAS_RANGE_MSK;
+        if (dev->variant_id == BME68X_VARIANT_GAS_HIGH)
+        {
+            data[i]->status |= buff[off + 16] & BME68X_GASM_VALID_MSK;
+            data[i]->status |= buff[off + 16] & BME68X_HEAT_STAB_MSK;
+        }
+        else
+        {
+            data[i]->status |= buff[off + 14] & BME68X_GASM_VALID_MSK;
+            data[i]->status |= buff[off + 14] & BME68X_HEAT_STAB_MSK;
+        }
+
+        data[i]->idac = set_val[data[i]->gas_index];
+        data[i]->res_heat = set_val[10 + data[i]->gas_index];
+        data[i]->gas_wait = set_val[20 + data[i]->gas_index];
+        data[i]->temperature = calc_temperature(adc_temp, dev);
+        data[i]->pressure = calc_pressure(adc_pres, dev);
+        data[i]->humidity = calc_humidity(adc_hum, dev);
+        if (dev->variant_id == BME68X_VARIANT_GAS_HIGH)
+        {
+            data[i]->gas_resistance = calc_gas_resistance(adc_gas_res_high, gas_range_h, dev);
+        }
+        else
+        {
+            data[i]->gas_resistance = calc_gas_resistance(adc_gas_res_low, gas_range_l, dev);
+        }
     }
 
     return rslt;
@@ -1380,7 +1481,7 @@ static int8_t set_conf(const struct bme68x_heatr_conf *conf, uint8_t op_mode, ui
                 rh_reg_addr[i] = BME68X_REG_RES_HEAT0 + i;
                 rh_reg_data[i] = calc_res_heat(conf->heatr_temp_prof[i], dev);
                 gw_reg_addr[i] = BME68X_REG_GAS_WAIT0 + i;
-                gw_reg_data[i] = (uint8_t)conf->heatr_dur_prof[i];
+                gw_reg_data[i] = (uint8_t) conf->heatr_dur_prof[i];
             }
 
             (*nb_conv) = conf->profile_len;

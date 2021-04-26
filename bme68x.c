@@ -1,5 +1,5 @@
 /**
-* Copyright (c) 2020 Bosch Sensortec GmbH. All rights reserved.
+* Copyright (c) 2021 Bosch Sensortec GmbH. All rights reserved.
 *
 * BSD-3-Clause
 *
@@ -31,8 +31,8 @@
 * POSSIBILITY OF SUCH DAMAGE.
 *
 * @file       bme68x.c
-* @date       2021-03-18
-* @version    v4.4.4
+* @date       2021-04-26
+* @version    v4.4.5
 *
 */
 
@@ -59,8 +59,11 @@ static uint32_t calc_pressure(uint32_t pres_adc, const struct bme68x_dev *dev);
 /* This internal API is used to calculate the humidity in integer */
 static uint32_t calc_humidity(uint16_t hum_adc, const struct bme68x_dev *dev);
 
-/* This internal API is used to calculate the gas resistance */
-static uint32_t calc_gas_resistance(uint16_t gas_res_adc, uint8_t gas_range, const struct bme68x_dev *dev);
+/* This internal API is used to calculate the gas resistance high */
+static uint32_t calc_gas_resistance_high(uint16_t gas_res_adc, uint8_t gas_range);
+
+/* This internal API is used to calculate the gas resistance low */
+static uint32_t calc_gas_resistance_low(uint16_t gas_res_adc, uint8_t gas_range, const struct bme68x_dev *dev);
 
 /* This internal API is used to calculate the heater resistance using integer */
 static uint8_t calc_res_heat(uint16_t temp, const struct bme68x_dev *dev);
@@ -76,8 +79,11 @@ static float calc_pressure(uint32_t pres_adc, const struct bme68x_dev *dev);
 /* This internal API is used to calculate the humidity value in float */
 static float calc_humidity(uint16_t hum_adc, const struct bme68x_dev *dev);
 
-/* This internal API is used to calculate the gas resistance value in float */
-static float calc_gas_resistance(uint16_t gas_res_adc, uint8_t gas_range, const struct bme68x_dev *dev);
+/* This internal API is used to calculate the gas resistance high value in float */
+static float calc_gas_resistance_high(uint16_t gas_res_adc, uint8_t gas_range);
+
+/* This internal API is used to calculate the gas resistance low value in float */
+static float calc_gas_resistance_low(uint16_t gas_res_adc, uint8_t gas_range, const struct bme68x_dev *dev);
 
 /* This internal API is used to calculate the heater resistance value using float */
 static uint8_t calc_res_heat(uint16_t temp, const struct bme68x_dev *dev);
@@ -922,8 +928,8 @@ static uint32_t calc_humidity(uint16_t hum_adc, const struct bme68x_dev *dev)
     return (uint32_t)calc_hum;
 }
 
-/* This internal API is used to calculate the gas resistance */
-static uint32_t calc_gas_resistance(uint16_t gas_res_adc, uint8_t gas_range, const struct bme68x_dev *dev)
+/* This internal API is used to calculate the gas resistance low */
+static uint32_t calc_gas_resistance_low(uint16_t gas_res_adc, uint8_t gas_range, const struct bme68x_dev *dev)
 {
     int64_t var1;
     uint64_t var2;
@@ -948,6 +954,23 @@ static uint32_t calc_gas_resistance(uint16_t gas_res_adc, uint8_t gas_range, con
     calc_gas_res = (uint32_t)((var3 + ((int64_t)var2 >> 1)) / (int64_t)var2);
 
     /*lint -restore */
+    return calc_gas_res;
+}
+
+/* This internal API is used to calculate the gas resistance */
+static uint32_t calc_gas_resistance_high(uint16_t gas_res_adc, uint8_t gas_range, const struct bme680_dev *dev)
+{
+    uint32_t calc_gas_res;
+    uint32_t var1 = UINT32_C(262144) >> gas_range;
+    int32_t var2 = (int32_t)gas_res_adc - INT32_C(512);
+
+    var2 *= INT32_C(3);
+    var2 = INT32_C(4096) + var2;
+
+    /* multiplying 10000 then dividing then multiplying by 100 instead of multiplying by 1000000 to prevent overflow */
+    calc_gas_res = (UINT32_C(10000) * var1) / (uint32_t)var2;
+    calc_gas_res = calc_gas_res * 100;
+
     return calc_gas_res;
 }
 
@@ -1070,8 +1093,8 @@ static float calc_humidity(uint16_t hum_adc, const struct bme68x_dev *dev)
     return calc_hum;
 }
 
-/* This internal API is used to calculate the gas resistance */
-static float calc_gas_resistance(uint16_t gas_res_adc, uint8_t gas_range, const struct bme68x_dev *dev)
+/* This internal API is used to calculate the gas resistance low value in float */
+static float calc_gas_resistance_low(uint16_t gas_res_adc, uint8_t gas_range, const struct bme68x_dev *dev)
 {
     float calc_gas_res;
     float var1;
@@ -1090,6 +1113,21 @@ static float calc_gas_resistance(uint16_t gas_res_adc, uint8_t gas_range, const 
     var2 = (var1) * (1.0f + lookup_k1_range[gas_range] / 100.0f);
     var3 = 1.0f + (lookup_k2_range[gas_range] / 100.0f);
     calc_gas_res = 1.0f / (float)(var3 * (0.000000125f) * gas_range_f * (((gas_res_f - 512.0f) / var2) + 1.0f));
+
+    return calc_gas_res;
+}
+
+/* This internal API is used to calculate the gas resistance value in float */
+static float calc_gas_resistance_high(uint16_t gas_res_adc, uint8_t gas_range)
+{
+    float calc_gas_res;
+    uint32_t var1 = UINT32_C(262144) >> gas_range;
+    int32_t var2 = (int32_t)gas_res_adc - INT32_C(512);
+
+    var2 *= INT32_C(3);
+    var2 = INT32_C(4096) + var2;
+
+    calc_gas_res = 1000000.0f * (float)var1 / (float)var2;
 
     return calc_gas_res;
 }
@@ -1216,11 +1254,11 @@ static int8_t read_field_data(uint8_t index, struct bme68x_data *data, struct bm
                 data->humidity = calc_humidity(adc_hum, dev);
                 if (dev->variant_id == BME68X_VARIANT_GAS_HIGH)
                 {
-                    data->gas_resistance = calc_gas_resistance(adc_gas_res_high, gas_range_h, dev);
+                    data->gas_resistance = calc_gas_resistance_high(adc_gas_res_high, gas_range_h);
                 }
                 else
                 {
-                    data->gas_resistance = calc_gas_resistance(adc_gas_res_low, gas_range_l, dev);
+                    data->gas_resistance = calc_gas_resistance_low(adc_gas_res_low, gas_range_l, dev);
                 }
 
                 break;
@@ -1305,11 +1343,11 @@ static int8_t read_all_field_data(struct bme68x_data * const data[], struct bme6
         data[i]->humidity = calc_humidity(adc_hum, dev);
         if (dev->variant_id == BME68X_VARIANT_GAS_HIGH)
         {
-            data[i]->gas_resistance = calc_gas_resistance(adc_gas_res_high, gas_range_h, dev);
+            data[i]->gas_resistance = calc_gas_resistance_high(adc_gas_res_high, gas_range_h);
         }
         else
         {
-            data[i]->gas_resistance = calc_gas_resistance(adc_gas_res_low, gas_range_l, dev);
+            data[i]->gas_resistance = calc_gas_resistance_low(adc_gas_res_low, gas_range_l, dev);
         }
     }
 

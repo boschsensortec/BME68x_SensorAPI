@@ -95,7 +95,7 @@ int main(void)
 #ifdef BME68X_USE_FPU
             printf("%u, %lu, %.2f, %.2f, %.2f, %.2f, 0x%x, %d, %d\n",
                    sample_count,
-                   (long unsigned int)time_ms,
+                   (long unsigned int)time_ms + (i * (del_period / 2000)),
                    data[i].temperature,
                    data[i].pressure,
                    data[i].humidity,
@@ -106,7 +106,7 @@ int main(void)
 #else
             printf("%u, %lu, %d, %lu, %lu, %lu, 0x%x, %d, %d\n",
                    sample_count,
-                   (long unsigned int)time_ms,
+                   (long unsigned int)time_ms + (i * (del_period / 2000)),
                    (data[i].temperature / 100),
                    (long unsigned int)data[i].pressure,
                    (long unsigned int)(data[i].humidity / 1000),

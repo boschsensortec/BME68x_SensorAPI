@@ -31,8 +31,8 @@
 * POSSIBILITY OF SUCH DAMAGE.
 *
 * @file       bme68x.c
-* @date       2021-04-26
-* @version    v4.4.5
+* @date       2021-05-24
+* @version    v4.4.6
 *
 */
 
@@ -958,7 +958,7 @@ static uint32_t calc_gas_resistance_low(uint16_t gas_res_adc, uint8_t gas_range,
 }
 
 /* This internal API is used to calculate the gas resistance */
-static uint32_t calc_gas_resistance_high(uint16_t gas_res_adc, uint8_t gas_range, const struct bme680_dev *dev)
+static uint32_t calc_gas_resistance_high(uint16_t gas_res_adc, uint8_t gas_range)
 {
     uint32_t calc_gas_res;
     uint32_t var1 = UINT32_C(262144) >> gas_range;

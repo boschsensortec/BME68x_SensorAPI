@@ -31,8 +31,8 @@
 * POSSIBILITY OF SUCH DAMAGE.
 *
 * @file       bme68x.c
-* @date       2021-05-24
-* @version    v4.4.6
+* @date       2021-11-09
+* @version    v4.4.7
 *
 */
 
@@ -720,9 +720,9 @@ int8_t bme68x_get_heatr_conf(const struct bme68x_heatr_conf *conf, struct bme68x
 }
 
 /*
- * @brief This API performs Self-test of low gas variant of BME68X
+ * @brief This API performs Self-test of low and high gas variants of BME68X
  */
-int8_t bme68x_low_gas_selftest_check(const struct bme68x_dev *dev)
+int8_t bme68x_selftest_check(const struct bme68x_dev *dev)
 {
     int8_t rslt;
     uint8_t n_fields;

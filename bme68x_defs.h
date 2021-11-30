@@ -31,8 +31,8 @@
 * POSSIBILITY OF SUCH DAMAGE.
 *
 * @file       bme68x_defs.h
-* @date       2021-05-24
-* @version    v4.4.6
+* @date       2021-11-09
+* @version    v4.4.7
 *
 */
 

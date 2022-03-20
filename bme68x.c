@@ -696,7 +696,7 @@ int8_t bme68x_get_heatr_conf(const struct bme68x_heatr_conf *conf, struct bme68x
     {
         if (conf && conf->heatr_dur_prof && conf->heatr_temp_prof)
         {
-            for (i = 0; i < 10; i++)
+            for (i = 0; i < conf->profile_len; i++)
             {
                 conf->heatr_temp_prof[i] = data_array[i];
             }
@@ -704,7 +704,7 @@ int8_t bme68x_get_heatr_conf(const struct bme68x_heatr_conf *conf, struct bme68x
             rslt = bme68x_get_regs(BME68X_REG_GAS_WAIT0, data_array, 10, dev);
             if (rslt == BME68X_OK)
             {
-                for (i = 0; i < 10; i++)
+                for (i = 0; i < conf->profile_len; i++)
                 {
                     conf->heatr_dur_prof[i] = data_array[i];
                 }

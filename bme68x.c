@@ -289,10 +289,11 @@ int8_t bme68x_soft_reset(struct bme68x_dev *dev)
         {
             rslt = bme68x_set_regs(&reg_addr, &soft_rst_cmd, 1, dev);
 
-            /* Wait for 5ms */
-            dev->delay_us(BME68X_PERIOD_RESET, dev->intf_ptr);
             if (rslt == BME68X_OK)
             {
+                /* Wait for 5ms */
+                dev->delay_us(BME68X_PERIOD_RESET, dev->intf_ptr);
+
                 /* After reset get the memory page */
                 if (dev->intf == BME68X_SPI_INTF)
                 {

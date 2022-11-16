@@ -31,7 +31,7 @@ BME68X_INTF_RET_TYPE bme68x_i2c_read(uint8_t reg_addr, uint8_t *reg_data, uint32
 {
     uint8_t dev_addr = *(uint8_t*)intf_ptr;
 
-    return coines_read_i2c(dev_addr, reg_addr, reg_data, (uint16_t)len);
+    return coines_read_i2c(COINES_I2C_BUS_0, dev_addr, reg_addr, reg_data, (uint16_t)len);
 }
 
 /*!
@@ -41,7 +41,7 @@ BME68X_INTF_RET_TYPE bme68x_i2c_write(uint8_t reg_addr, const uint8_t *reg_data,
 {
     uint8_t dev_addr = *(uint8_t*)intf_ptr;
 
-    return coines_write_i2c(dev_addr, reg_addr, (uint8_t *)reg_data, (uint16_t)len);
+    return coines_write_i2c(COINES_I2C_BUS_0, dev_addr, reg_addr, (uint8_t *)reg_data, (uint16_t)len);
 }
 
 /*!
@@ -51,7 +51,7 @@ BME68X_INTF_RET_TYPE bme68x_spi_read(uint8_t reg_addr, uint8_t *reg_data, uint32
 {
     uint8_t dev_addr = *(uint8_t*)intf_ptr;
 
-    return coines_read_spi(dev_addr, reg_addr, reg_data, (uint16_t)len);
+    return coines_read_spi(COINES_SPI_BUS_0, dev_addr, reg_addr, reg_data, (uint16_t)len);
 }
 
 /*!
@@ -61,7 +61,7 @@ BME68X_INTF_RET_TYPE bme68x_spi_write(uint8_t reg_addr, const uint8_t *reg_data,
 {
     uint8_t dev_addr = *(uint8_t*)intf_ptr;
 
-    return coines_write_spi(dev_addr, reg_addr, (uint8_t *)reg_data, (uint16_t)len);
+    return coines_write_spi(COINES_SPI_BUS_0, dev_addr, reg_addr, (uint8_t *)reg_data, (uint16_t)len);
 }
 
 /*!
@@ -111,7 +111,7 @@ int8_t bme68x_interface_init(struct bme68x_dev *bme, uint8_t intf)
 
     if (bme != NULL)
     {
-        int16_t result = coines_open_comm_intf(COINES_COMM_INTF_USB);
+        int16_t result = coines_open_comm_intf(COINES_COMM_INTF_USB, NULL);
         if (result < COINES_SUCCESS)
         {
             printf(
@@ -126,13 +126,16 @@ int8_t bme68x_interface_init(struct bme68x_dev *bme, uint8_t intf)
         setbuf(stdout, NULL);
 #endif
 
-        if (result == COINES_SUCCESS)
+        if (result != COINES_SUCCESS)
         {
-            if ((board_info.shuttle_id != BME68X_SHUTTLE_ID))
-            {
-                printf("! Warning invalid sensor shuttle \n ," "This application will not support this sensor \n");
-                exit(COINES_E_FAILURE);
-            }
+            printf("\n Unable to retrieve board information ! \n");
+            exit(COINES_E_FAILURE);
+        }
+
+        if ((board_info.shuttle_id != BME68X_SHUTTLE_ID))
+        {
+            printf("! Warning invalid sensor shuttle \n ," "This application will not support this sensor \n");
+            exit(COINES_E_FAILURE);
         }
 
         coines_set_shuttleboard_vdd_vddio_config(0, 0);
@@ -146,7 +149,11 @@ int8_t bme68x_interface_init(struct bme68x_dev *bme, uint8_t intf)
             bme->read = bme68x_i2c_read;
             bme->write = bme68x_i2c_write;
             bme->intf = BME68X_I2C_INTF;
-            coines_config_i2c_bus(COINES_I2C_BUS_0, COINES_I2C_STANDARD_MODE);
+			
+			/* SDO pin is made low */
+			coines_set_pin_config(COINES_SHUTTLE_PIN_SDO, COINES_PIN_DIRECTION_OUT, COINES_PIN_VALUE_LOW);
+
+            result = coines_config_i2c_bus(COINES_I2C_BUS_0, COINES_I2C_STANDARD_MODE);
         }
         /* Bus configuration : SPI */
         else if (intf == BME68X_SPI_INTF)
@@ -156,7 +163,12 @@ int8_t bme68x_interface_init(struct bme68x_dev *bme, uint8_t intf)
             bme->read = bme68x_spi_read;
             bme->write = bme68x_spi_write;
             bme->intf = BME68X_SPI_INTF;
-            coines_config_spi_bus(COINES_SPI_BUS_0, COINES_SPI_SPEED_7_5_MHZ, COINES_SPI_MODE0);
+            result = coines_config_spi_bus(COINES_SPI_BUS_0, COINES_SPI_SPEED_7_5_MHZ, COINES_SPI_MODE0);
+        }
+
+        if(COINES_SUCCESS != result)
+        {
+            rslt = COINES_E_COMM_INIT_FAILED;
         }
 
         coines_delay_msec(100);
@@ -187,5 +199,5 @@ void bme68x_coines_deinit(void)
     /* Coines interface reset */
     coines_soft_reset();
     coines_delay_msec(1000);
-    coines_close_comm_intf(COINES_COMM_INTF_USB);
+    coines_close_comm_intf(COINES_COMM_INTF_USB, NULL);
 }

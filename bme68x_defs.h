@@ -704,8 +704,10 @@ typedef void (*bme68x_delay_us_fptr_t)(uint32_t period, void *intf_ptr);
  * @brief Interface selection Enumerations
  */
 enum bme68x_intf {
+#if 0
     /*! SPI interface */
     BME68X_SPI_INTF,
+#endif
     /*! I2C interface */
     BME68X_I2C_INTF
 };
@@ -943,8 +945,10 @@ struct bme68x_dev
     /*! SPI/I2C interface */
     enum bme68x_intf intf;
 
+#if 0
     /*! Memory page used */
     uint8_t mem_page;
+#endif
 
     /*! Ambient temperature in Degree C*/
     int8_t amb_temp;

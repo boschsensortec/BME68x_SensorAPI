@@ -96,11 +96,13 @@ static int8_t read_field_data(uint8_t index, struct bme68x_data *data, struct bm
 /* This internal API is used to read all data fields of the sensor */
 static int8_t read_all_field_data(struct bme68x_data * const data[], struct bme68x_dev *dev);
 
+#if 0
 /* This internal API is used to switch between SPI memory pages */
 static int8_t set_mem_page(uint8_t reg_addr, struct bme68x_dev *dev);
 
 /* This internal API is used to get the current SPI memory page */
 static int8_t get_mem_page(struct bme68x_dev *dev);
+#endif
 
 /* This internal API is used to check the bme68x_dev for null pointers */
 static int8_t null_ptr_check(const struct bme68x_dev *dev);
@@ -192,6 +194,7 @@ int8_t bme68x_set_regs(const uint8_t *reg_addr, const uint8_t *reg_data, uint32_
             /* Interleave the 2 arrays */
             for (index = 0; index < len; index++)
             {
+#if 0
                 if (dev->intf == BME68X_SPI_INTF)
                 {
                     /* Set the memory page */
@@ -199,6 +202,7 @@ int8_t bme68x_set_regs(const uint8_t *reg_addr, const uint8_t *reg_data, uint32_
                     tmp_buff[(2 * index)] = reg_addr[index] & BME68X_SPI_WR_MSK;
                 }
                 else
+#endif
                 {
                     tmp_buff[(2 * index)] = reg_addr[index];
                 }
@@ -240,6 +244,7 @@ int8_t bme68x_get_regs(uint8_t reg_addr, uint8_t *reg_data, uint32_t len, struct
     rslt = null_ptr_check(dev);
     if ((rslt == BME68X_OK) && reg_data)
     {
+#if 0
         if (dev->intf == BME68X_SPI_INTF)
         {
             /* Set the memory page */
@@ -249,6 +254,7 @@ int8_t bme68x_get_regs(uint8_t reg_addr, uint8_t *reg_data, uint32_t len, struct
                 reg_addr = reg_addr | BME68X_SPI_RD_MSK;
             }
         }
+#endif
 
         dev->intf_rslt = dev->read(reg_addr, reg_data, len, dev->intf_ptr);
         if (dev->intf_rslt != 0)
@@ -279,10 +285,12 @@ int8_t bme68x_soft_reset(struct bme68x_dev *dev)
     rslt = null_ptr_check(dev);
     if (rslt == BME68X_OK)
     {
+#if 0
         if (dev->intf == BME68X_SPI_INTF)
         {
             rslt = get_mem_page(dev);
         }
+#endif
 
         /* Reset the device */
         if (rslt == BME68X_OK)
@@ -294,11 +302,13 @@ int8_t bme68x_soft_reset(struct bme68x_dev *dev)
                 /* Wait for 5ms */
                 dev->delay_us(BME68X_PERIOD_RESET, dev->intf_ptr);
 
+#if 0
                 /* After reset get the memory page */
                 if (dev->intf == BME68X_SPI_INTF)
                 {
                     rslt = get_mem_page(dev);
                 }
+#endif
             }
         }
     }
@@ -1355,6 +1365,7 @@ static int8_t read_all_field_data(struct bme68x_data * const data[], struct bme6
     return rslt;
 }
 
+#if 0
 /* This internal API is used to switch between SPI memory pages */
 static int8_t set_mem_page(uint8_t reg_addr, struct bme68x_dev *dev)
 {
@@ -1423,6 +1434,7 @@ static int8_t get_mem_page(struct bme68x_dev *dev)
 
     return rslt;
 }
+#endif
 
 /* This internal API is used to limit the max value of a parameter */
 static int8_t boundary_check(uint8_t *value, uint8_t max, struct bme68x_dev *dev)

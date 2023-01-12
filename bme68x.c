@@ -747,7 +747,9 @@ int8_t bme68x_selftest_check(const struct bme68x_dev *dev)
     t_dev.amb_temp = 25;
     t_dev.read = dev->read;
     t_dev.write = dev->write;
+#if 0
     t_dev.intf = dev->intf;
+#endif
     t_dev.delay_us = dev->delay_us;
     t_dev.intf_ptr = dev->intf_ptr;
     rslt = bme68x_init(&t_dev);

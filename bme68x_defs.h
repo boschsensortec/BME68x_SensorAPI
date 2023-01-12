@@ -772,11 +772,48 @@ struct bme68x_data
  */
 struct bme68x_calib_data
 {
+#ifndef BME68X_USE_FPU
+
+    /*! Variable to store the intermediate temperature coefficient */
+    int32_t t_fine;
+#else
+
+    /*! Variable to store the intermediate temperature coefficient */
+    float t_fine;
+#endif
+
     /*! Calibration coefficient for the humidity sensor */
     uint16_t par_h1;
 
     /*! Calibration coefficient for the humidity sensor */
     uint16_t par_h2;
+
+    /*! Calibration coefficient for the gas sensor */
+    int16_t par_gh2;
+
+    /*! Calibration coefficient for the temperature sensor */
+    uint16_t par_t1;
+
+    /*! Calibration coefficient for the temperature sensor */
+    int16_t par_t2;
+
+    /*! Calibration coefficient for the pressure sensor */
+    uint16_t par_p1;
+
+    /*! Calibration coefficient for the pressure sensor */
+    int16_t par_p2;
+
+    /*! Calibration coefficient for the pressure sensor */
+    int16_t par_p4;
+
+    /*! Calibration coefficient for the pressure sensor */
+    int16_t par_p5;
+
+    /*! Calibration coefficient for the pressure sensor */
+    int16_t par_p8;
+
+    /*! Calibration coefficient for the pressure sensor */
+    int16_t par_p9;
 
     /*! Calibration coefficient for the humidity sensor */
     int8_t par_h3;
@@ -797,34 +834,13 @@ struct bme68x_calib_data
     int8_t par_gh1;
 
     /*! Calibration coefficient for the gas sensor */
-    int16_t par_gh2;
-
-    /*! Calibration coefficient for the gas sensor */
     int8_t par_gh3;
-
-    /*! Calibration coefficient for the temperature sensor */
-    uint16_t par_t1;
-
-    /*! Calibration coefficient for the temperature sensor */
-    int16_t par_t2;
 
     /*! Calibration coefficient for the temperature sensor */
     int8_t par_t3;
 
     /*! Calibration coefficient for the pressure sensor */
-    uint16_t par_p1;
-
-    /*! Calibration coefficient for the pressure sensor */
-    int16_t par_p2;
-
-    /*! Calibration coefficient for the pressure sensor */
     int8_t par_p3;
-
-    /*! Calibration coefficient for the pressure sensor */
-    int16_t par_p4;
-
-    /*! Calibration coefficient for the pressure sensor */
-    int16_t par_p5;
 
     /*! Calibration coefficient for the pressure sensor */
     int8_t par_p6;
@@ -833,22 +849,7 @@ struct bme68x_calib_data
     int8_t par_p7;
 
     /*! Calibration coefficient for the pressure sensor */
-    int16_t par_p8;
-
-    /*! Calibration coefficient for the pressure sensor */
-    int16_t par_p9;
-
-    /*! Calibration coefficient for the pressure sensor */
     uint8_t par_p10;
-#ifndef BME68X_USE_FPU
-
-    /*! Variable to store the intermediate temperature coefficient */
-    int32_t t_fine;
-#else
-
-    /*! Variable to store the intermediate temperature coefficient */
-    float t_fine;
-#endif
 
     /*! Heater resistance range coefficient */
     uint8_t res_heat_range;
@@ -920,9 +921,6 @@ struct bme68x_heatr_conf
  */
 struct bme68x_dev
 {
-    /*! Chip Id */
-    uint8_t chip_id;
-
     /*!
      * The interface pointer is used to enable the user
      * to link their interface descriptors for reference during the
@@ -930,6 +928,29 @@ struct bme68x_dev
      * hardware.
      */
     void *intf_ptr;
+
+    /*! Read function pointer */
+    bme68x_read_fptr_t read;
+
+    /*! Write function pointer */
+    bme68x_write_fptr_t write;
+
+    /*! Delay function pointer */
+    bme68x_delay_us_fptr_t delay_us;
+
+    /*! Sensor calibration data */
+    struct bme68x_calib_data calib;
+
+#if 0
+    /*! SPI/I2C interface */
+    enum bme68x_intf intf;
+
+    /*! Memory page used */
+    uint8_t mem_page;
+#endif
+
+    /*! Chip Id */
+    uint8_t chip_id;
 
     /*!
      *             Variant id
@@ -940,30 +961,10 @@ struct bme68x_dev
      *      1      |   BME68X_VARIANT_GAS_HIGH
      * ----------------------------------------
      */
-    uint32_t variant_id;
-
-    /*! SPI/I2C interface */
-    enum bme68x_intf intf;
-
-#if 0
-    /*! Memory page used */
-    uint8_t mem_page;
-#endif
+    uint8_t variant_id;
 
     /*! Ambient temperature in Degree C*/
     int8_t amb_temp;
-
-    /*! Sensor calibration data */
-    struct bme68x_calib_data calib;
-
-    /*! Read function pointer */
-    bme68x_read_fptr_t read;
-
-    /*! Write function pointer */
-    bme68x_write_fptr_t write;
-
-    /*! Delay function pointer */
-    bme68x_delay_us_fptr_t delay_us;
 
     /*! To store interface pointer error */
     BME68X_INTF_RET_TYPE intf_rslt;

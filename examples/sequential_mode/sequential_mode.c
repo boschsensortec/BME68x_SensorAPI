@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2021 Bosch Sensortec GmbH
+ * Copyright (C) 2023 Bosch Sensortec GmbH
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -44,7 +44,7 @@ int main(void)
      * For I2C : BME68X_I2C_INTF
      * For SPI : BME68X_SPI_INTF
      */
-    rslt = bme68x_interface_init(&bme, BME68X_I2C_INTF);
+    rslt = bme68x_interface_init(&bme, BME68X_SPI_INTF);
     bme68x_check_rslt("bme68x_interface_init", rslt);
 
     rslt = bme68x_init(&bme);

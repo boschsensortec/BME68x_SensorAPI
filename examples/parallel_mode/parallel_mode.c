@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2021 Bosch Sensortec GmbH
+ * Copyright (C) 2023 Bosch Sensortec GmbH
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -50,7 +50,7 @@ int main(void)
      * For I2C : BME68X_I2C_INTF
      * For SPI : BME68X_SPI_INTF
      */
-    rslt = bme68x_interface_init(&bme, BME68X_I2C_INTF);
+    rslt = bme68x_interface_init(&bme, BME68X_SPI_INTF);
     bme68x_check_rslt("bme68x_interface_init", rslt);
 
     rslt = bme68x_init(&bme);
@@ -75,7 +75,7 @@ int main(void)
     heatr_conf.heatr_dur_prof = mul_prof;
 
     /* Shared heating duration in milliseconds */
-    heatr_conf.shared_heatr_dur = 140 - (bme68x_get_meas_dur(BME68X_PARALLEL_MODE, &conf, &bme) / 1000);
+    heatr_conf.shared_heatr_dur = (uint16_t)(140 - (bme68x_get_meas_dur(BME68X_PARALLEL_MODE, &conf, &bme) / 1000));
 
     heatr_conf.profile_len = 10;
     rslt = bme68x_set_heatr_conf(BME68X_PARALLEL_MODE, &heatr_conf, &bme);

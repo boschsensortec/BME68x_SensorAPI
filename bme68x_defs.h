@@ -755,7 +755,7 @@ struct bme68x_data
     /*! Pressure in Pascal */
     float pressure;
 
-    /*! Humidity in % relative humidity x1000 */
+    /*! Humidity in % relative humidity */
     float humidity;
 
     /*! Gas resistance in Ohms */
